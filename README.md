@@ -151,8 +151,11 @@ The ipl_dashboard.pbix file contains an interactive dashboard with:
 ## Author
 
 Name: Akshay Gundelli
+
 Email: gundelliakshay@gmail.com
+
 LinkedIn: https://linkedin.com/in/gundelli-akshay
+
 GitHub: https://github.com/gundelli-akshay
 
 ---
