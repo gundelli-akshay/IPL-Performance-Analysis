@@ -1,6 +1,6 @@
 # ============================================================
 # FILE: analysis.py
-# IPL Player Performance Analysis - Main Script
+# IPL Performance Analysis - Main Script
 # Run: python analysis.py
 # ============================================================
 
