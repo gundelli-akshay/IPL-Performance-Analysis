@@ -29,7 +29,6 @@ A data analysis project to identify top performers, team win patterns, and toss 
 
 - Python 3.8+
 - Pandas
-- NumPy
 - Matplotlib
 - Seaborn
 - MySQL 8.0
