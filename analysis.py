@@ -1,12 +1,11 @@
 # ============================================================
 # FILE: analysis.py
-# IPL Performance Analysis - Main Script
+# IPL Player Performance Analysis - Main Script
 # Run: python analysis.py
 # ============================================================
 
 import os
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -85,15 +84,9 @@ def load_data():
     print("\n📂 Loading datasets...")
 
     if not os.path.exists(MATCHES_PATH):
-        raise FileNotFoundError(
-            "matches.csv not found in data/ folder.\n"
-            "Download from: https://www.kaggle.com/datasets/patrickb1912/ipl-complete-dataset-20082020"
-        )
+        raise FileNotFoundError("matches.csv not found in data/ folder.")
     if not os.path.exists(DELIVERIES_PATH):
-        raise FileNotFoundError(
-            "deliveries.csv not found in data/ folder.\n"
-            "Download from: https://www.kaggle.com/datasets/patrickb1912/ipl-complete-dataset-20082020"
-        )
+        raise FileNotFoundError("deliveries.csv not found in data/ folder.")
 
     matches    = pd.read_csv(MATCHES_PATH)
     deliveries = pd.read_csv(DELIVERIES_PATH)
@@ -110,17 +103,18 @@ def load_data():
 def clean_data(matches, deliveries):
     print("\n🧹 Cleaning data...")
 
-    # Keep only completed matches
-    matches = matches[matches["result"].isin(["runs", "wickets"])].copy()
-
-    # Fill missing winners
-    matches["winner"].fillna("Unknown", inplace=True)
+    # Keep matches with valid winners 
+    matches = matches[matches["winner"].notna()].copy()
 
     # Standardize team names
     for col in ["team1", "team2", "winner", "toss_winner"]:
         matches[col] = matches[col].replace(TEAM_NAME_MAP)
 
     deliveries["batting_team"] = deliveries["batting_team"].replace(TEAM_NAME_MAP)
+    deliveries["bowling_team"] = deliveries["bowling_team"].replace(TEAM_NAME_MAP)
+
+    # Remove duplicate matches
+    matches = matches.drop_duplicates(subset="id")
 
     print(f"  Matches after cleaning  : {matches.shape[0]}")
     print(f"  Missing values (matches): {matches.isnull().sum().sum()}")
@@ -137,20 +131,19 @@ def run_eda(matches, deliveries):
 
     findings = {}
 
-    # Team wins
+    # Team wins 
     team_wins = matches["winner"].value_counts().head(10)
     findings["team_wins"] = team_wins
-    print(f"\n  Top 5 Teams by Wins:\n{team_wins.head().to_string()}")
 
     # Toss impact
     matches["toss_won_match"] = matches["toss_winner"] == matches["winner"]
     toss_won  = matches["toss_won_match"].sum()
     toss_lost = len(matches) - toss_won
     toss_pct  = round(toss_won * 100 / len(matches), 2)
+
     findings["toss_won"]  = toss_won
     findings["toss_lost"] = toss_lost
     findings["toss_pct"]  = toss_pct
-    print(f"\n  Toss winner won the match : {toss_pct}% of the time")
 
     # Top batsmen
     top_batsmen = (
@@ -158,18 +151,17 @@ def run_eda(matches, deliveries):
         .sum().sort_values(ascending=False).head(10)
     )
     findings["top_batsmen"] = top_batsmen
-    print(f"\n  Top 3 Run Scorers:\n{top_batsmen.head(3).to_string()}")
 
     # Top bowlers
     top_bowlers = bowler_wickets(deliveries).head(10)
     findings["top_bowlers"] = top_bowlers
-    print(f"\n  Top 3 Wicket Takers:\n{top_bowlers.head(3).to_string()}")
 
     # Runs per season
-    merged = deliveries.merge(matches[["id", "season"]], left_on="match_id", right_on="id", how="inner")
+    merged = deliveries.merge(matches[["id", "season"]],
+                             left_on="match_id", right_on="id", how="inner")
+
     season_runs = merged.groupby("season")["total_runs"].sum()
     findings["season_runs"] = season_runs
-    print(f"\n  Runs per Season:\n{season_runs.to_string()}")
 
     # Top venues
     findings["top_venues"] = matches["venue"].value_counts().head(10)
@@ -179,7 +171,6 @@ def run_eda(matches, deliveries):
 
     # Toss decision
     findings["toss_decision"] = matches["toss_decision"].value_counts()
-    print(f"\n  Toss Decision:\n{findings['toss_decision'].to_string()}")
 
     return findings, matches, deliveries
 
@@ -190,11 +181,9 @@ def run_eda(matches, deliveries):
 def create_visualizations(findings, matches):
     print("\n📊 Creating visualizations...")
 
-    # Chart 1 — Top 10 Teams by Wins
     barh_chart(findings["team_wins"], "Top 10 Teams by Total Wins",
                "Number of Wins", "1_team_wins.png", PALETTE["orange"])
 
-    # Chart 2 — Toss Impact on Match Result
     pie_chart(
         [findings["toss_won"], findings["toss_lost"]],
         ["Won Toss & Match", "Won Toss, Lost Match"],
@@ -203,32 +192,26 @@ def create_visualizations(findings, matches):
         [PALETTE["green"], PALETTE["red"]],
     )
 
-    # Chart 3 — Top 10 Run Scorers
     barh_chart(findings["top_batsmen"], "Top 10 Run Scorers in IPL History",
                "Total Runs", "3_top_batsmen.png", PALETTE["blue"])
 
-    # Chart 4 — Top 10 Wicket Takers
     barh_chart(findings["top_bowlers"], "Top 10 Wicket Takers in IPL History",
                "Total Wickets", "4_top_bowlers.png", PALETTE["red"])
 
-    # Chart 5 — Runs Scored Per Season
     fig, ax = plt.subplots()
     season_runs = findings["season_runs"]
     ax.plot(season_runs.index, season_runs.values, marker="o",
-            color=PALETTE["purple"], linewidth=2.5, markersize=7)   
+            color=PALETTE["purple"], linewidth=2.5, markersize=7)
     ax.fill_between(season_runs.index, season_runs.values, alpha=0.15, color=PALETTE["purple"])
     ax.set_title("Total Runs Scored Per Season", fontsize=14, fontweight="bold")
     ax.set_xlabel("Season")
     ax.set_ylabel("Total Runs")
-    ax.set_xticks(season_runs.index)
     ax.tick_params(axis="x", rotation=45)
     save(fig, "5_runs_per_season.png")
 
-    # Chart 6 — Top 10 Venues by Matches Hosted
     barh_chart(findings["top_venues"], "Top 10 Venues by Matches Hosted",
                "Number of Matches", "6_top_venues.png", PALETTE["teal"])
 
-    # Chart 7 — Matches Per Season
     fig, ax = plt.subplots()
     mps = findings["matches_per_season"]
     bars = ax.bar(mps.index.astype(str), mps.values, color=PALETTE["yellow"], width=0.6)
@@ -239,17 +222,17 @@ def create_visualizations(findings, matches):
     ax.tick_params(axis="x", rotation=45)
     save(fig, "7_matches_per_season.png")
 
-    # Chart 8 — Toss Decision (Bat vs Field)
+    td = findings["toss_decision"]
     pie_chart(
-        findings["toss_decision"].values,
-        findings["toss_decision"].index,
+        td.values,
+        td.index,
         "Toss Decision — Bat vs Field",
         "8_toss_decision.png",
         [PALETTE["blue"], PALETTE["orange"]],
     )
 
     print(f"  All charts saved to '{VISUALS_DIR}/' folder.")
-    
+
 
 # ============================================================
 # STEP 5 — Save Summary Report
@@ -268,8 +251,7 @@ def save_report(findings):
 ============================================================
 
 DATASET
-  Source  : IPL Complete Dataset 2008-2020 (Kaggle)
-  Files   : matches.csv, deliveries.csv
+  Source  : IPL Dataset (Updated)
 
 ------------------------------------------------------------
 KEY FINDINGS
@@ -292,22 +274,12 @@ KEY FINDINGS
    Teams that won the toss went on to win the match
    {toss_pct}% of the time.
 
-------------------------------------------------------------
-INSIGHTS
-------------------------------------------------------------
-  - Toss advantage is real but not decisive
-  - Top run scorers and wicket takers are consistent
-    across seasons showing player dominance
-  - Wankhede and Eden Gardens are the most used venues
-    indicating their strategic importance
-
 ============================================================
 """
 
     with open("ipl_report.txt", "w") as f:
         f.write(report)
 
-    print(report)
     print("  Report saved to 'ipl_report.txt'")
 
 
@@ -317,7 +289,6 @@ INSIGHTS
 def export_excel(matches, deliveries):
     print("\n📊 Exporting Excel report...")
 
-    # Sheet 1 — Top 20 Batsmen
     top_batsmen = (
         deliveries.groupby("batter")["batsman_runs"]
         .sum().sort_values(ascending=False).head(20).reset_index()
@@ -325,17 +296,14 @@ def export_excel(matches, deliveries):
     top_batsmen.columns = ["Batsman", "Total Runs"]
     top_batsmen.insert(0, "Rank", range(1, len(top_batsmen) + 1))
 
-    # Sheet 2 — Top 20 Bowlers
     top_bowlers = bowler_wickets(deliveries).head(20).reset_index()
     top_bowlers.columns = ["Bowler", "Total Wickets"]
     top_bowlers.insert(0, "Rank", range(1, len(top_bowlers) + 1))
 
-    # Sheet 3 — Team Wins
     team_wins = matches["winner"].value_counts().reset_index()
     team_wins.columns = ["Team", "Total Wins"]
     team_wins.insert(0, "Rank", range(1, len(team_wins) + 1))
 
-    # Sheet 4 — Season Summary
     merged = deliveries.merge(
         matches[["id", "season"]], left_on="match_id", right_on="id", how="inner"
     )
@@ -344,7 +312,6 @@ def export_excel(matches, deliveries):
     season_summary = season_runs.merge(season_matches, on="season")
     season_summary.columns = ["Season", "Total Runs", "Matches Played"]
 
-    # Sheet 5 — Toss Analysis
     matches["toss_won_match"] = matches["toss_winner"] == matches["winner"]
     toss_by_decision = (
         matches.groupby("toss_decision")["toss_won_match"]
@@ -356,7 +323,6 @@ def export_excel(matches, deliveries):
         toss_by_decision["Won After Toss"] / toss_by_decision["Total"] * 100
     ).round(2)
 
-    # Write all sheets to Excel
     with pd.ExcelWriter("ipl_report.xlsx", engine="openpyxl") as writer:
         top_batsmen.to_excel(writer, sheet_name="Top Batsmen", index=False)
         top_bowlers.to_excel(writer, sheet_name="Top Bowlers", index=False)
@@ -367,7 +333,7 @@ def export_excel(matches, deliveries):
     print("  Excel report saved as 'ipl_report.xlsx'")
 
 
-    # ============================================================
+# ============================================================
 # MAIN
 # ============================================================
 if __name__ == "__main__":

@@ -1,40 +1,30 @@
 
 ============================================================
-       IPL PERFORMANCE ANALYSIS â€” SUMMARY REPORT
+       IPL PLAYER PERFORMANCE ANALYSIS — SUMMARY REPORT
 ============================================================
 
 DATASET
-  Source  : IPL Complete Dataset 2008-2020 (Kaggle)
-  Files   : matches.csv, deliveries.csv
+  Source  : IPL Dataset (Updated)
 
 ------------------------------------------------------------
 KEY FINDINGS
 ------------------------------------------------------------
 
 1. MOST SUCCESSFUL TEAM
-   Mumbai Indians â€” 142 total wins
+   Mumbai Indians — 144 total wins
 
 2. TOP 3 RUN SCORERS
-   1. V Kohli â€” 8014 runs
-   2. S Dhawan â€” 6769 runs
-   3. RG Sharma â€” 6630 runs
+   1. V Kohli — 8014 runs
+   2. S Dhawan — 6769 runs
+   3. RG Sharma — 6630 runs
 
 3. TOP 3 WICKET TAKERS
-   1. YS Chahal â€” 205 wickets
-   2. PP Chawla â€” 192 wickets
-   3. DJ Bravo â€” 183 wickets
+   1. YS Chahal — 205 wickets
+   2. PP Chawla — 192 wickets
+   3. DJ Bravo — 183 wickets
 
 4. TOSS IMPACT
    Teams that won the toss went on to win the match
-   50.93% of the time.
-
-------------------------------------------------------------
-INSIGHTS
-------------------------------------------------------------
-  - Toss advantage is real but not decisive
-  - Top run scorers and wicket takers are consistent
-    across seasons showing player dominance
-  - Wankhede and Eden Gardens are the most used venues
-    indicating their strategic importance
+   50.83% of the time.
 
 ============================================================
